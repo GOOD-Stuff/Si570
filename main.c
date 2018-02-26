@@ -268,16 +268,51 @@ int main() {
 			print("*****\tWrite was good\t*****\n\r");
 		}
 		else if (( c == 'g') || ( c == 'G')) {
-			int for_print = start_freq;
-			int precision = (start_freq - for_print) * 1000;
-			xil_printf("\r\nWill be written %d.%3d MHz \r\n", for_print, precision);
-			// Write data in DSPLL
-			print("\n\r*****\tWriting to DSPLL\t*****\n\r");
-			Status = i2cWrite(&MyI2C, WriteBuff, 7, I2C_SLAVE_ADDR_PLL, 1);
-			if (Status != XST_SUCCESS) {
-				print("Something goes wrong in Write \n\r");
-				return XST_FAILURE;
-			}
+		    u8 Buffer[2];
+		    int for_print = start_freq;
+		    int precision = (start_freq - for_print) * 1000;
+		    xil_printf("\r\nWill be written %d.%3d MHz \r\n", for_print, precision);
+		    // Write data in DSPLL
+		    print("\n\r*****\tWriting to DSPLL\t*****\n\r");
+		    // Read the current state of Register 137 and set the Freeze DCO bit in that register
+		    // This must be done in order to update Registers 7-12 on the Si57x
+		    Buffer[1] = 0x10;
+		    Buffer[0] = Register_137;
+		    Status    = i2cWrite(&MyI2C, Buffer, 2, I2C_SLAVE_ADDR_PLL, 0);
+		    if (Status != XST_SUCCESS) {
+		 	   print("Write wasn't good :(\r\n");
+		    }
+
+		    // Write the new values to Registers 7-12
+		    Status = i2cWrite(&MyI2C, WriteBuff, 7, I2C_SLAVE_ADDR_PLL, 1);
+		    if (Status != XST_SUCCESS) {
+			   print("Write wasn't good :(\r\n");
+		    }
+
+		    // Read the current state of Register 137 and clear the Freeze DCO bit
+		    i2cRead(&MyI2C, Buffer, 1, Register_137, I2C_SLAVE_ADDR_PLL, 0);
+		    Buffer[1] = Buffer[0] & 0xEF;
+		    Buffer[0] = Register_137;
+		    Status    = i2cFastWrite(&MyI2C, Buffer, 2, I2C_SLAVE_ADDR_PLL, 0);
+		    if (Status != XST_SUCCESS) {
+			   print("Write wasn't good :(\r\n");
+		    }
+
+		    // Set the NewFreq bit to alert the DPSLL that a new frequency configuration has been applied
+		    Buffer[1] = 0x40;
+		    Buffer[0] = Register_135;
+		    Status = i2cFastWrite(&MyI2C, Buffer, 2, I2C_SLAVE_ADDR_PLL, 0);
+		    if (Status != XST_SUCCESS) {
+			   print("Write wasn't good :(\r\n");
+		    }
+		    for(i = 0; i < DELAY; i++);	// delay must be ~10 ms
+
+		    // Check whether the frequency has been written?
+		    print("\n\r*****\tVerification\t*****\n\r");
+		    Status = verification(&MyI2C, WriteBuff);
+		    if (Status == XST_SUCCESS) {
+			   print("*****\tVerification was good\t*****\n\r");
+		    } else print("\r\nThe frequency is not recorded \n\rReturn to initial (~56.352 MHz) frequency\n\r");
 			print("*****\tWrite was good\t*****\n\r");
 		}
 		else if (( c == 'h') || (c == 'H')) {
