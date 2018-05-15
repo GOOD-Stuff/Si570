@@ -66,6 +66,12 @@
 #define CH_01_05	     0x21					// 1 and 5 channel (switch)
 #define CH_06 		     0x40 					// 6 channel
 #define POW_2_28             268435456.0    		// double precision floating point
+
+
+#define CH_CARR_PLL			0x80 // 7 channel - PLL on Carrier board
+#define CH_FMC_PLL			0x01 // 0 channel - PLL on Mezzanine board A
+
+
 int i;
 u8 WriteBuff[SIZE_wr];
 u8 ReadBuff[SIZE_rd];
@@ -399,17 +405,17 @@ double Input(){
  */
 void CalculateReg(u8 *RegBuffer, double Freq_new, XIicPs *I2C){
 	   int Status;
-	   u8 Buffer[5];				// Buffer which translate from RegBuffer to RFREQ presentation
-	   u8 HS;						// divider HS_div
-	   u8 N1;						// divider N1
+	   u8 Buffer[5];			// Buffer which translate from RegBuffer to RFREQ presentation
+	   u8 HS;				// divider HS_div
+	   u8 N1;				// divider N1
 	   float FDCO_MAX = 5670;		// Max DCO frequency in Si570
 	   float FDCO_MIN = 4850;		// Min DCO frequency in Si570
-	   double fRFREQ;				// double representation of unsigned RFREQ
-	   u64 RFREQ = 0;				// unsigned 64 bit register RFREQ
+	   double fRFREQ;			// double representation of unsigned RFREQ
+	   u64 RFREQ = 0;			// unsigned 64 bit register RFREQ
 
 	   // Get HS_div and N1 from current RFREQ registers
-	   HS = (RegBuffer[0] >> 5) & 0x7;
-	   N1 = (RegBuffer[0] & 0x1F) << 2;
+	   HS  = (RegBuffer[0] >> 5) & 0x7;
+	   N1  = (RegBuffer[0] & 0x1F) << 2;
 	   N1 |= (RegBuffer[1] & 0xF0) >> 6;
 	   N1 += 1;
 	   if	   (HS == 0) HS = 4;
@@ -477,9 +483,9 @@ void CalculateReg(u8 *RegBuffer, double Freq_new, XIicPs *I2C){
 	            	validCombo = 1;                   // either 1 or an even number
 	            }
 	         }
-	         if(validCombo == 1) break;            // Divider was found, exit loop
+	         if (validCombo == 1) break;            // Divider was found, exit loop
 	      }
-	      if(validCombo == 1) break;               // Divider was found, exit loop
+	      if (validCombo == 1) break;               // Divider was found, exit loop
 
 	      curr_div = curr_div + 1;                 // If a valid divider is not found,
 	                                               // increment curr_div and loop
@@ -551,7 +557,7 @@ void CalculateReg(u8 *RegBuffer, double Freq_new, XIicPs *I2C){
 	   if (Status != XST_SUCCESS) {
 		   print("Write wasn't good :(\r\n");
 	   }
-	   for(i = 0; i < DELAY; i++);	// delay must be ~10 ms
+	   for (i = 0; i < DELAY; i++);	// delay must be ~10 ms
 
 	   // Check whether the frequency has been written?
 	   print("\n\r*****\tVerification\t*****\n\r");
@@ -690,8 +696,8 @@ static int i2cWrite(XIicPs *I2C, u8 *WriteBuffer, int count, u16 Slave_Addr, int
 	int Status;
 
 	// Filling the buffer base address and data
-	if( Show ){
-		for(i = 0; i < count; i++){
+	if (Show) {
+		for (i = 0; i < count; i++) {
 			xil_printf("WriteBuffer = 0x%04x \n\r", WriteBuffer[i]);
 		}
 	}
@@ -725,8 +731,8 @@ static int i2cFastWrite(XIicPs *I2C, u8 *WriteBuffer, int count, u16 Slave_Addr,
 	int Status;
 
 	// Filling the buffer base address and data
-	if( Show ){
-		for(i = 0; i < count; i++){
+	if (Show) {
+		for(i = 0; i < count; i++) {
 			xil_printf("WriteBuffer = 0x%04x \n\r", WriteBuffer[i]);
 		}
 	}
@@ -788,12 +794,12 @@ static int i2cRead(XIicPs *I2C, u8 *ReadBuffer, int count, Address i2cAddr,	u16 
 	//Address EepromAddr = 0;
 	// Set EEPROM address
 	Status = XIicPs_MasterSendPolled(I2C, (u8*) &i2cAddr, 1, Slave_Addr);
-	if(Status != XST_SUCCESS){
+	if (Status != XST_SUCCESS) {
 		print("Failure in Send - ");
 		return XST_FAILURE;
 	}
-	while(XIicPs_BusIsBusy(I2C)){}
-	for(i = 0; i < DELAY; i++){}
+	while(XIicPs_BusIsBusy(I2C)) {}
+	for (i = 0; i < DELAY; i++) {}
 
 	// Receive data from register
 	Status = XIicPs_MasterRecvPolled(I2C, ReadBuffer, count, Slave_Addr);
@@ -804,7 +810,7 @@ static int i2cRead(XIicPs *I2C, u8 *ReadBuffer, int count, Address i2cAddr,	u16 
 	while (XIicPs_BusIsBusy(I2C)) {	}
 	for (i = 0; i < DELAY; i++) {	}
 
-	if( Show ){
+	if (Show) {
 		for (i = 0; i < count; i++)
 			xil_printf("%d) Rd: 0x%04x \n\r", i + 1, ReadBuffer[i]);
 	}
